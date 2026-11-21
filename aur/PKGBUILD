@@ -1,0 +1,41 @@
+pkgname=figma-tauri-git
+pkgver=0.1.0.r0.g0000000
+pkgrel=1
+pkgdesc='Figma desktop client: the official figma.com in a Tauri webview'
+arch=('x86_64')
+url='https://github.com/hridaya2004/figma-tauri'
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3')
+makedepends=('cargo' 'git')
+optdepends=('gst-plugins-good: audio/video playback in the webview')
+provides=('figma-tauri')
+conflicts=('figma-tauri')
+options=('!lto') # Rust build; makepkg's C-flag LTO breaks the link
+source=("$pkgname::git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  printf '%s.r%s.g%s' "$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)" \
+    "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$pkgname"
+  export RUSTUP_TOOLCHAIN=stable CARGO_TARGET_DIR=target
+  cargo build --frozen --release
+}
+
+package() {
+  cd "$pkgname"
+  install -Dm755 target/release/figma-tauri -t "$pkgdir/usr/bin/"
+  install -Dm644 figma-tauri.desktop -t "$pkgdir/usr/share/applications/"
+  install -Dm644 icons/icon.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/figma-tauri.png"
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}

@@ -1,0 +1,19 @@
+pkgbase = figma-tauri-git
+	pkgdesc = Figma desktop client: the official figma.com in a Tauri webview
+	pkgver = 0.1.0.r0.g0000000
+	pkgrel = 1
+	url = https://github.com/hridaya2004/figma-tauri
+	arch = x86_64
+	license = MIT
+	makedepends = cargo
+	makedepends = git
+	depends = webkit2gtk-4.1
+	depends = gtk3
+	optdepends = gst-plugins-good: audio/video playback in the webview
+	provides = figma-tauri
+	conflicts = figma-tauri
+	options = !lto
+	source = figma-tauri-git::git+https://github.com/hridaya2004/figma-tauri.git
+	sha256sums = SKIP
+
+pkgname = figma-tauri-git

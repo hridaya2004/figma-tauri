@@ -1,2 +1,6 @@
 /target
 /gen
+/aur/src/
+/aur/pkg/
+/aur/figma-tauri-git/
+/aur/*.pkg.tar.*
