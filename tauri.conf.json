@@ -6,6 +6,8 @@
   "app": {
     "windows": [
       {
+        "label": "main",
+        "create": false,
         "title": "Figma",
         "url": "https://www.figma.com/",
         "width": 1440,
