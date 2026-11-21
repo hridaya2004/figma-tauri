@@ -1,14 +1,17 @@
 # AGENTS.md
 
-Desktop Figma client: a Tauri 2 window that loads `https://www.figma.com/`. Replaces the outdated, buggy Electron wrapper. There is no frontend and no Node project; the only custom Rust is the popup handler in `src/main.rs`. Keep it that way unless asked.
+Desktop Figma client: a Tauri 2 window that loads `https://www.figma.com/`. Replaces the outdated, buggy Electron wrapper. There is no frontend and no Node project; the only custom Rust is the popup and download handlers in `src/main.rs`. Keep it that way unless asked.
 
 ## Layout
 
 - `tauri.conf.json`: one window, `url` = figma.com, `create: false` (the window is built in `main.rs`, so the popup hook can be attached). Change window size/title/url here.
-- `src/main.rs`: builds the main window from that config and handles `window.open` popups by opening them as extra Tauri windows with `window_features(...)`, which keeps `window.opener` (needed for Google SSO to report back to Figma).
+- `src/main.rs`: builds the main window from that config and handles `window.open` popups by opening them as extra Tauri windows with `window_features(...)`, which keeps `window.opener` (needed for Google SSO to report back to Figma). wry's own `window.close()` handler destroys the webview but leaves the window, so we also close the window from the webview's GTK `destroy` signal (a later `close` handler never runs: wry's destroys the widget first). Hence the Linux-only `gtk` + `webkit2gtk` deps.
 - Downloads (`on_download` in `main.rs`): WebKitGTK has no save prompt, so a download goes to `~/.cache/dev.figma-tauri.client/downloads/<n>/` first; when it finishes a native save dialog opens (non-blocking), and the file is moved to the chosen path. Cancel deletes it; errors show a dialog. `tauri-plugin-dialog` is used from Rust only (no capability granted, so pages can't open dialogs).
 - `build.rs`: `tauri_build::build()`.
-- `icons/icon.png`: solid-colour placeholder, not Figma's logo. Replace with a real icon.
+- `icons/icon.png`: copied from the locally installed `figma-linux` package (512x512).
+- `figma-tauri.desktop`: template desktop entry. On Wayland the taskbar/titlebar icon comes from a desktop file matching the app id, which is the binary name (`enableGTKAppId` is off), so the file must stay named `figma-tauri.desktop`. Install locally (icon display unconfirmed by an agent):
+  `install -Dm644 icons/icon.png ~/.local/share/icons/hicolor/512x512/apps/figma-tauri.png`
+  `sed "s|^Exec=.*|Exec=$PWD/target/release/figma-tauri|" figma-tauri.desktop > ~/.local/share/applications/figma-tauri.desktop`
 - `Cargo.lock` is committed (this is an app). `target/` and `gen/` are ignored.
 
 ## System dependency (Linux)
@@ -32,15 +35,25 @@ No tests: there is no logic to test.
 ## Verified state (Linux, WebKitGTK 2.54, Tauri 2.12)
 
 - Builds (debug + release) and launches; figma.com marketing page loads and renders, no unsupported-browser page.
-- Google login failed before the popup handler was added (popups were dropped). The handler builds and the main window still launches, but **the Google login flow itself is not verified** by an agent.
+- Logged in and the Recents page loads inside the app (the user's session persisted), so login through the popup works.
+- Popup: with a local test page, `window.open` opens a popup with `window.opener` set, `postMessage` reaches the opener, and `window.close()` removes the window. (The test needed a temporary patch: WebKitGTK blocks `window.open` without a user gesture.)
 - Downloads: temp download + dialog request verified against a local `Content-Disposition: attachment` server (file landed with the right name, dialog requested with the right default). **Not seen on screen** (screen locked during testing): the dialog UI, saving, cancel.
-- **Not verified:** email/password login, opening a file (WebGL canvas), popup closing after login.
+- **Not verified:** opening a design file (WebGL canvas), email/password login.
 
 ## Known risks / troubleshooting
 
 - The Linux engine is **WebKitGTK, not Chromium**. Figma targets Chromium, so expect rough edges the Electron app did not have. Don't promise parity.
 - Blank/white canvas or flicker: try `WEBKIT_DISABLE_DMABUF_RENDERER=1 cargo run`, then `WEBKIT_DISABLE_COMPOSITING_MODE=1`. Only bake one into the app if it is confirmed necessary.
 - If figma.com serves an unsupported-browser page, set a Safari-style `userAgent` on the window in `tauri.conf.json`.
-- Google SSO may still refuse embedded webviews ("This browser or app may not be secure"). If so, set a Safari/Firefox-style `userAgent` on the window in `tauri.conf.json`. Email/password login is the fallback.
+- If Google SSO ever refuses the embedded webview ("This browser or app may not be secure"), set a Safari/Firefox-style `userAgent` on the window in `tauri.conf.json`. It has not been needed so far.
 - All `window.open`/`target=_blank` links open as bare in-app windows with no URL bar (including external sites). Route non-Figma/Google URLs to the system browser only if that becomes annoying.
 - Startup logs `GStreamer element autoaudiosink not found` (and a harmless-looking GLib-GObject CRITICAL). Audio/video in the webview likely needs `gst-plugins-good`; unconfirmed.
+
+## Parked: tab bar
+
+A tab bar was built and tested, then parked at the user's request (they want "Figma's own" tabs, meaning unclear; the custom strip was rejected). It lives on the local branch `wip/tab-bar`, not in this branch. Findings worth keeping:
+
+- Tauri multiwebview needs the `unstable` feature, and `custom-protocol` so `cargo run` serves the local strip.
+- **On Linux Tauri packs child webviews into the window's `GtkBox` (expand=true) and ignores bounds** (`set_bounds` is a no-op there), so children split the window equally. The branch pins the strip's height via `with_webview` + GTK `set_child_packing`.
+- The branch's strip IPC was locked down with an `AppManifest` in `build.rs` plus `capabilities/tabs.json` scoped to the strip webview; pages in tabs were verified to be denied. If tabs return, keep that, and update the "no IPC" and `frontendDist` rules above.
+- Not built: Ctrl+T/W/Tab shortcuts, intercepting same-tab file navigations (only `window.open` of figma file URLs became tabs).
