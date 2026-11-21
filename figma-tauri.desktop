@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Figma Tauri
+Comment=Figma in a Tauri webview
+Exec=figma-tauri
+Icon=figma-tauri
+Categories=Graphics;Design;
+StartupWMClass=figma-tauri
