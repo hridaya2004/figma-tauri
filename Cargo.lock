@@ -813,8 +813,10 @@ dependencies = [
 name = "figma-tauri"
 version = "0.1.0"
 dependencies = [
+ "gtk",
  "tauri",
  "tauri-build",
+ "webkit2gtk",
 ]
 
 [[package]]

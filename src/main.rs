@@ -23,6 +23,19 @@ fn main() {
                     .title(url.as_str())
                     .build()
                     .expect("failed to open popup window");
+                    // wry's window.close() handler destroys the webview but leaves the
+                    // empty window behind (and disconnects any later `close` handler),
+                    // so close the window when the webview is destroyed.
+                    #[cfg(target_os = "linux")]
+                    {
+                        let w = window.clone();
+                        let _ = window.with_webview(move |pw| {
+                            use gtk::prelude::WidgetExt;
+                            pw.inner().connect_destroy(move |_| {
+                                let _ = w.close();
+                            });
+                        });
+                    }
                     NewWindowResponse::Create { window }
                 })
                 .build()?;
