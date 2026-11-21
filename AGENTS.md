@@ -12,6 +12,8 @@ Desktop Figma client: a Tauri 2 window that loads `https://www.figma.com/`. Repl
 - `figma-tauri.desktop`: template desktop entry. On Wayland the taskbar/titlebar icon comes from a desktop file matching the app id, which is the binary name (`enableGTKAppId` is off), so the file must stay named `figma-tauri.desktop`. Install locally (icon display unconfirmed by an agent):
   `install -Dm644 icons/icon.png ~/.local/share/icons/hicolor/512x512/apps/figma-tauri.png`
   `sed "s|^Exec=.*|Exec=$PWD/target/release/figma-tauri|" figma-tauri.desktop > ~/.local/share/applications/figma-tauri.desktop`
+- `LICENSE`: MIT, covers this wrapper's code only (not Figma, its trademarks, or its web app).
+- `aur/`: package files, see Packaging below.
 - `Cargo.lock` is committed (this is an app). `target/` and `gen/` are ignored.
 
 ## System dependency (Linux)
@@ -48,6 +50,17 @@ No tests: there is no logic to test.
 - If Google SSO ever refuses the embedded webview ("This browser or app may not be secure"), set a Safari/Firefox-style `userAgent` on the window in `tauri.conf.json`. It has not been needed so far.
 - All `window.open`/`target=_blank` links open as bare in-app windows with no URL bar (including external sites). Route non-Figma/Google URLs to the system browser only if that becomes annoying.
 - Startup logs `GStreamer element autoaudiosink not found` (and a harmless-looking GLib-GObject CRITICAL). Audio/video in the webview likely needs `gst-plugins-good`; unconfirmed.
+
+## Packaging (paru / AUR)
+
+- `aur/PKGBUILD` (package `figma-tauri-git`) and `aur/.SRCINFO`. Source is `git+https://github.com/hridaya2004/figma-tauri.git`, i.e. the remote's **default branch** (the code must be merged to `main` and pushed before paru can build it). Lives in `aur/`, not the repo root, because makepkg uses `./src` as scratch space and would collide with the Rust `src/`.
+- Depends: `webkit2gtk-4.1`, `gtk3` (optional: `gst-plugins-good`). `options=('!lto')` because it is a Rust build. Installs the binary, `figma-tauri.desktop`, the 512px icon and `LICENSE` (MIT).
+- Install from a checkout: `cd aur && makepkg -si`, or `paru -B aur` (the paru form is untested; it needs sudo).
+- After editing the PKGBUILD: `cd aur && makepkg --printsrcinfo > .SRCINFO`.
+- Test without pushing: copy `PKGBUILD` to a temp dir, change `source` to `git+file:///path/to/this/repo#branch=<branch>` (changes must be committed; makepkg clones), run `makepkg -f`. Verified that way: builds, package holds binary/desktop/icon/license, no missing shared libs, packaged binary launches.
+- `makepkg` warns `Package contains reference to $srcdir`: benign, Tauri's `generate_context!` bakes in the manifest dir as a literal. `--remap-path-prefix` does not remove it.
+- Publishing to the real AUR (so anyone can `paru -S figma-tauri-git`): copy `PKGBUILD` + `.SRCINFO` into a clone of `ssh://aur@aur.archlinux.org/figma-tauri-git.git` and push. Needs an AUR account; **not done**.
+- The icon is Figma's logo (trademark), taken from the figma-linux package. Think about that before publishing it anywhere.
 
 ## Parked: tab bar
 
