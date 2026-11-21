@@ -6,6 +6,7 @@ Desktop Figma client: a Tauri 2 window that loads `https://www.figma.com/`. Repl
 
 - `tauri.conf.json`: one window, `url` = figma.com, `create: false` (the window is built in `main.rs`, so the popup hook can be attached). Change window size/title/url here.
 - `src/main.rs`: builds the main window from that config and handles `window.open` popups by opening them as extra Tauri windows with `window_features(...)`, which keeps `window.opener` (needed for Google SSO to report back to Figma).
+- Downloads (`on_download` in `main.rs`): WebKitGTK has no save prompt, so a download goes to `~/.cache/dev.figma-tauri.client/downloads/<n>/` first; when it finishes a native save dialog opens (non-blocking), and the file is moved to the chosen path. Cancel deletes it; errors show a dialog. `tauri-plugin-dialog` is used from Rust only (no capability granted, so pages can't open dialogs).
 - `build.rs`: `tauri_build::build()`.
 - `icons/icon.png`: solid-colour placeholder, not Figma's logo. Replace with a real icon.
 - `Cargo.lock` is committed (this is an app). `target/` and `gen/` are ignored.
@@ -32,6 +33,7 @@ No tests: there is no logic to test.
 
 - Builds (debug + release) and launches; figma.com marketing page loads and renders, no unsupported-browser page.
 - Google login failed before the popup handler was added (popups were dropped). The handler builds and the main window still launches, but **the Google login flow itself is not verified** by an agent.
+- Downloads: temp download + dialog request verified against a local `Content-Disposition: attachment` server (file landed with the right name, dialog requested with the right default). **Not seen on screen** (screen locked during testing): the dialog UI, saving, cancel.
 - **Not verified:** email/password login, opening a file (WebGL canvas), popup closing after login.
 
 ## Known risks / troubleshooting
