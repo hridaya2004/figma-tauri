@@ -40,7 +40,8 @@ No tests: there is no logic to test.
 - Logged in and the Recents page loads inside the app (the user's session persisted), so login through the popup works.
 - Popup: with a local test page, `window.open` opens a popup with `window.opener` set, `postMessage` reaches the opener, and `window.close()` removes the window. (The test needed a temporary patch: WebKitGTK blocks `window.open` without a user gesture.)
 - Downloads: temp download + dialog request verified against a local `Content-Disposition: attachment` server (file landed with the right name, dialog requested with the right default). **Not seen on screen** (screen locked during testing): the dialog UI, saving, cancel.
-- **Not verified:** opening a design file (WebGL canvas), email/password login.
+- Design file opens (Intel+NVIDIA laptop, Wayland, no env vars): WebGL2 canvas boots, multiplayer joins, `loadtime=9.66s`. Two earlier launches sat on the loading bar (about 95%) with the skeleton UI. Cause not found: `WEBKIT_DISABLE_DMABUF_RENDERER=1` did not help, and the run that worked had no env vars. In that run Figma's multiplayer websocket closed and reconnected 3 times before joining, so a stall can be that retry loop. Reproducing it needs the page console: set `enable_write_console_messages_to_stdout` via `with_webview` (debug only) and read stdout.
+- **Not verified:** email/password login.
 
 ## Known risks / troubleshooting
 
